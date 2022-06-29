@@ -1,0 +1,19 @@
+[package]
+name = "grokloc-rust"
+version = "0.1.0"
+edition = "2021"
+license-file = "LICENSE"
+description = "GrokLOC.com application server"
+readme = "README.md"
+
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bcrypt = "0.10.1"
+hex = "0.4.3"
+openssl-sys = "0.9"
+openssl = "0.10"
+ulid = "0.5.0"
+
+sqlx = { version = "0.5", features = [ "runtime-async-std-native-tls", "sqlite", "any" ] }
+async-std = { version = "1", features = [ "attributes" ] }

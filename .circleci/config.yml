@@ -1,0 +1,17 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: grokloc/grokloc-rs:dev
+    environment:
+        GROKLOC_ENV: "UNIT"
+        APP_HOST: "localhost"
+        APP_PORT: "3000"
+        CI: "1"
+    working_directory: /grokloc
+    steps:
+      - checkout
+      - run: cargo build --verbose
+      - run: cargo test --verbose
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+    parallelism: 4

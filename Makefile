@@ -7,14 +7,20 @@ PORTS        = -p 3000:3000
 VOLUMES      = -v $(CWD):$(BASE)
 RUN          = $(DOCKER_RUN) $(VOLUMES) -w $(BASE) $(PORTS) $(IMG_DEV)
 
-# Default rule - local test
-.PHONY: local-test
-local-test:
-	cargo test
+.PHONY: build
+build:
+	cargo build --verbose
+
+.PHONY: test
+test:
+	cargo test --verbose
 
 .PHONY: clippy
 clippy:
 	cargo clippy --all-targets --all-features -- -D warnings
+
+.PHONY: all
+all: test clippy
 
 .PHONY: docker
 docker:
@@ -32,6 +38,10 @@ docker-pull:
 shell:
 	$(RUN) /bin/bash
 
-.PHONY: test
-test:
-	$(RUN) make local-test
+.PHONY: container-build
+container-build:
+	$(RUN) make build
+
+.PHONY: container-test
+container-test:
+	$(RUN) make test
