@@ -11,7 +11,9 @@ pub enum Level {
 }
 
 impl Default for Level {
-    fn default() -> Self { Level::Unit }
+    fn default() -> Self {
+        Level::Unit
+    }
 }
 
 impl fmt::Display for Level {
