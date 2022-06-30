@@ -114,7 +114,7 @@ end;
 #[cfg(test)]
 mod tests {
     use sqlx::{ Row };
-    use crate::grokloc::err;
+    use crate::grokloc::errs::db;
     use super::*;
 
     #[async_std::test]
@@ -143,7 +143,7 @@ mod tests {
             execute(&pool).await;
         match r {
             Err(err) => {
-                assert!(err::sqlx_duplicate(&err));
+                assert!(db::sqlx_duplicate(&err));
             },
             _ => unreachable!(),
         }
