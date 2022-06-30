@@ -7,14 +7,14 @@ use crate::grokloc::env;
 /// StateError abstracts over resource error types
 #[derive(Debug)]
 #[allow(dead_code)]
-pub enum StateError {
+pub enum Err {
     Sqlx(sqlx::Error),
 }
 
-impl fmt::Display for StateError {
+impl fmt::Display for Err {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            StateError::Sqlx(err) =>
+            Err::Sqlx(err) =>
                 write!(f, "sqlx error {:?}", err),
         }
     }
@@ -34,4 +34,4 @@ pub struct App {
     pub root_user_api_secret: String,
 }
 
-// pub mod unit;
+pub mod unit;
