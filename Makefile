@@ -19,8 +19,12 @@ test:
 clippy:
 	cargo clippy --all-targets --all-features -- -D warnings
 
+.PHONY: fmt
+fmt:
+	for i in `find src -name \*.rs`; do rustfmt --edition 2021 $$i; done
+
 .PHONY: all
-all: test clippy
+all: test clippy fmt
 
 .PHONY: docker
 docker:

@@ -6,9 +6,9 @@ use bcrypt;
 use hex;
 use openssl::rand::rand_bytes;
 use openssl::sha::sha256;
-use openssl::symm::{Cipher};
 use openssl::symm::decrypt as openssl_decrypt;
 use openssl::symm::encrypt as openssl_encrypt;
+use openssl::symm::Cipher;
 use ulid::Ulid;
 
 pub const KEY_LEN: usize = 32;
@@ -32,12 +32,9 @@ pub enum AESError {
 impl fmt::Display for AESError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AESError::KeyLength =>
-                write!(f, "key length must be {}", KEY_LEN),
-            AESError::IVLength =>
-                write!(f, "iv length must be {}", IV_LEN),
-            AESError::Cipher(error_msg) =>
-                write!(f, "cipher error {}", error_msg),
+            AESError::KeyLength => write!(f, "key length must be {}", KEY_LEN),
+            AESError::IVLength => write!(f, "iv length must be {}", IV_LEN),
+            AESError::Cipher(error_msg) => write!(f, "cipher error {}", error_msg),
         }
     }
 }
@@ -73,11 +70,7 @@ pub fn decrypt(key: &str, iv: &str, c: &str) -> Result<String, AESError> {
     };
     let cipher = Cipher::aes_128_cbc();
     let c_bs = &c_decoded[..];
-    let decrypt_result = openssl_decrypt(
-        cipher,
-        key_slice,
-        Some(iv_slice),
-        c_bs);
+    let decrypt_result = openssl_decrypt(cipher, key_slice, Some(iv_slice), c_bs);
     match decrypt_result {
         Ok(m) => Ok(String::from_utf8(m).unwrap()),
         Err(error) => Err(AESError::Cipher(format!("{:?}", error))),
@@ -109,11 +102,7 @@ pub fn encrypt(key: &str, iv: &str, m: &str) -> Result<String, AESError> {
     };
     let iv_slice = &iv_decoded[..];
     let cipher = Cipher::aes_128_cbc();
-    let encrypt_result = openssl_encrypt(
-        cipher,
-        key_slice,
-        Some(iv_slice),
-        m.as_bytes());
+    let encrypt_result = openssl_encrypt(cipher, key_slice, Some(iv_slice), m.as_bytes());
     match encrypt_result {
         Ok(c) => Ok(hex::encode(c)),
         Err(error) => Err(AESError::Cipher(format!("{:?}", error))),
@@ -263,7 +252,10 @@ mod tests {
 
     #[test]
     fn crypt_test_sha256_hex() {
-        assert_eq!("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-                   sha256_hex("abc"), "sha256_hex");
+        assert_eq!(
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            sha256_hex("abc"),
+            "sha256_hex"
+        );
     }
 }

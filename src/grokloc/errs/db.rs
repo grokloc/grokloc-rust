@@ -1,6 +1,6 @@
 //! db contains functions and symbols for db-related errors
-use std::fmt;
 use sqlx;
+use std::fmt;
 
 /// Err covers potential error state arising from db operations
 #[derive(Debug)]

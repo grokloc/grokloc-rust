@@ -1,8 +1,8 @@
 //! state provides a trait for accessing conns and symbols
+use crate::grokloc::env;
+use sqlx;
 #[allow(unused_imports)]
 use std::fmt;
-use sqlx;
-use crate::grokloc::env;
 
 /// StateError abstracts over resource error types
 #[derive(Debug)]
@@ -14,8 +14,7 @@ pub enum Err {
 impl fmt::Display for Err {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Err::Sqlx(err) =>
-                write!(f, "sqlx error {:?}", err),
+            Err::Sqlx(err) => write!(f, "sqlx error {:?}", err),
         }
     }
 }

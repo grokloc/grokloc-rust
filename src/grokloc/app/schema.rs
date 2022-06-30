@@ -112,55 +112,64 @@ end;
 
 #[cfg(test)]
 mod tests {
-    use sqlx::{ Row };
-    use crate::grokloc::errs::db;
     use super::*;
+    use crate::grokloc::errs::db;
+    use sqlx::Row;
 
     #[async_std::test]
     async fn schema_test_sqlite_create_schema() -> Result<(), sqlx::Error> {
         let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect("sqlite::memory:").await?;
+            .connect("sqlite::memory:")
+            .await?;
         sqlx::query(APP_CREATE_SCHEMA_SQLITE).execute(&pool).await?;
-        let count_before0: i64 = sqlx::query_scalar("select count(*) as count from orgs").
-            fetch_one(&pool).await?;
+        let count_before0: i64 = sqlx::query_scalar("select count(*) as count from orgs")
+            .fetch_one(&pool)
+            .await?;
         assert_eq!(0, count_before0);
         // insert
-        sqlx::query("insert into orgs (id,name,owner,schema_version,status) values (?,?,?,?,?)").
-            bind("id0").
-            bind("name0").
-            bind("owner0").
-            bind(0_i64).
-            bind(0_i64).
-            execute(&pool).await?;
+        sqlx::query("insert into orgs (id,name,owner,schema_version,status) values (?,?,?,?,?)")
+            .bind("id0")
+            .bind("name0")
+            .bind("owner0")
+            .bind(0_i64)
+            .bind(0_i64)
+            .execute(&pool)
+            .await?;
         // duplicate insert
-        let r = sqlx::query("insert into orgs (id,name,owner,schema_version,status) values (?,?,?,?,?)").
-            bind("id0").
-            bind("name0").
-            bind("owner0").
-            bind(0_i64).
-            bind(0_i64).
-            execute(&pool).await;
+        let r = sqlx::query(
+            "insert into orgs (id,name,owner,schema_version,status) values (?,?,?,?,?)",
+        )
+        .bind("id0")
+        .bind("name0")
+        .bind("owner0")
+        .bind(0_i64)
+        .bind(0_i64)
+        .execute(&pool)
+        .await;
         match r {
             Err(err) => {
                 assert!(db::sqlx_duplicate(&err));
-            },
+            }
             _ => unreachable!(),
         }
 
         // read from cloned pool
         let read_pool = pool.clone();
-        let count_after0: i64 = sqlx::query_scalar("select count(*) as count from orgs").
-            fetch_one(&read_pool).await?;
+        let count_after0: i64 = sqlx::query_scalar("select count(*) as count from orgs")
+            .fetch_one(&read_pool)
+            .await?;
         assert_eq!(1, count_after0);
-        let row0 = sqlx::query("select ctime,mtime from orgs where id = ?").
-            bind("id0").
-            fetch_one(&read_pool).await?;
-        assert_eq!(row0.get::<i64,_>(0), row0.get::<i64,_>(1));
-        assert_ne!(row0.get::<i64,_>(0), 0);
+        let row0 = sqlx::query("select ctime,mtime from orgs where id = ?")
+            .bind("id0")
+            .fetch_one(&read_pool)
+            .await?;
+        assert_eq!(row0.get::<i64, _>(0), row0.get::<i64, _>(1));
+        assert_ne!(row0.get::<i64, _>(0), 0);
         // not found
-        let row1 = sqlx::query("select ctime,mtime from orgs where id = ?").
-            bind("id1").
-            fetch_one(&read_pool).await;
+        let row1 = sqlx::query("select ctime,mtime from orgs where id = ?")
+            .bind("id1")
+            .fetch_one(&read_pool)
+            .await;
         match row1 {
             Err(sqlx::Error::RowNotFound) => (),
             _ => unreachable!(),
