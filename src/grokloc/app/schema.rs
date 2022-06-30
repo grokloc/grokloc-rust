@@ -1,6 +1,5 @@
 //! Schemas contains db schemas
 
-#[allow(dead_code)]
 pub static APP_CREATE_SCHEMA_SQLITE: &str = r#"
 create table if not exists users (
        api_secret text unique not null,
