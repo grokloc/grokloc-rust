@@ -8,5 +8,5 @@ tasks:
       cd /home/build/grokloc-rust && cargo build --verbose
   - test: |
       cd /home/build/grokloc-rust && cargo test --verbose
-  - ls: |
-      ls -ltrah
+  - clippy: |
+      cd /home/build/grokloc-rust && cargo clippy --all-targets --all-features -- -D warnings
