@@ -23,18 +23,18 @@ pub const MAX_KDF_ROUNDS: u32 = 31;
 
 /// AESArgError indicates a malformed key or nonce
 #[derive(Debug, PartialEq)]
-pub enum AESError {
+pub enum Err {
     KeyLength,
     IVLength,
     Cipher(String),
 }
 
-impl fmt::Display for AESError {
+impl fmt::Display for Err {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AESError::KeyLength => write!(f, "key length must be {}", KEY_LEN),
-            AESError::IVLength => write!(f, "iv length must be {}", IV_LEN),
-            AESError::Cipher(error_msg) => write!(f, "cipher error {}", error_msg),
+            Err::KeyLength => write!(f, "key length must be {}", KEY_LEN),
+            Err::IVLength => write!(f, "iv length must be {}", IV_LEN),
+            Err::Cipher(error_msg) => write!(f, "cipher error {}", error_msg),
         }
     }
 }
@@ -44,9 +44,9 @@ impl fmt::Display for AESError {
 /// iv: a hex-encoded str of len IV_LEN
 /// c: a hex-encoded str produced by encrypt(...)
 #[allow(dead_code)]
-pub fn decrypt(key: &str, iv: &str, c: &str) -> Result<String, AESError> {
+pub fn decrypt(key: &str, iv: &str, c: &str) -> Result<String, Err> {
     if key.len() != KEY_LEN {
-        return Err(AESError::KeyLength);
+        return Err(Err::KeyLength);
     }
     let key_decoded = match hex::decode(key) {
         Ok(bs) => bs,
@@ -55,7 +55,7 @@ pub fn decrypt(key: &str, iv: &str, c: &str) -> Result<String, AESError> {
     };
     let key_slice = &key_decoded[..];
     if iv.len() != IV_LEN {
-        return Err(AESError::IVLength);
+        return Err(Err::IVLength);
     }
     let iv_decoded = match hex::decode(iv) {
         Ok(bs) => bs,
@@ -73,7 +73,7 @@ pub fn decrypt(key: &str, iv: &str, c: &str) -> Result<String, AESError> {
     let decrypt_result = openssl_decrypt(cipher, key_slice, Some(iv_slice), c_bs);
     match decrypt_result {
         Ok(m) => Ok(String::from_utf8(m).unwrap()),
-        Err(error) => Err(AESError::Cipher(format!("{:?}", error))),
+        Err(error) => Err(Err::Cipher(format!("{:?}", error))),
     }
 }
 
@@ -82,9 +82,9 @@ pub fn decrypt(key: &str, iv: &str, c: &str) -> Result<String, AESError> {
 /// iv: a hex-encoded str of len IV_LEN
 /// m: plaintext message
 #[allow(dead_code)]
-pub fn encrypt(key: &str, iv: &str, m: &str) -> Result<String, AESError> {
+pub fn encrypt(key: &str, iv: &str, m: &str) -> Result<String, Err> {
     if key.len() != KEY_LEN {
-        return Err(AESError::KeyLength);
+        return Err(Err::KeyLength);
     }
     let key_decoded = match hex::decode(key) {
         Ok(bs) => bs,
@@ -93,7 +93,7 @@ pub fn encrypt(key: &str, iv: &str, m: &str) -> Result<String, AESError> {
     };
     let key_slice = &key_decoded[..];
     if iv.len() != IV_LEN {
-        return Err(AESError::IVLength);
+        return Err(Err::IVLength);
     }
     let iv_decoded = match hex::decode(iv) {
         Ok(bs) => bs,
@@ -105,7 +105,7 @@ pub fn encrypt(key: &str, iv: &str, m: &str) -> Result<String, AESError> {
     let encrypt_result = openssl_encrypt(cipher, key_slice, Some(iv_slice), m.as_bytes());
     match encrypt_result {
         Ok(c) => Ok(hex::encode(c)),
-        Err(error) => Err(AESError::Cipher(format!("{:?}", error))),
+        Err(error) => Err(Err::Cipher(format!("{:?}", error))),
     }
 }
 
