@@ -1,6 +1,8 @@
 image: archlinux
 tasks:
+  - install-pkgs: |
+      pacman --noconfirm -S rust rust-analyzer pkg-config sqlite openssl
   - say-hello: |
       echo hello
-  - say-world: |
-      echo world
+  - ls: |
+      ls -ltrah
