@@ -1,4 +1,10 @@
-//! Schemas contains db schemas
+//! schema contains db schemas and related definitions
+
+#[allow(dead_code)]
+pub static ORGS_TABLENAME: &str = "orgs";
+
+#[allow(dead_code)]
+pub static USERS_TABLENAME: &str = "users";
 
 pub static APP_CREATE_SCHEMA_SQLITE: &str = r#"
 create table if not exists users (
@@ -113,7 +119,7 @@ end;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grokloc::errs::db;
+    use crate::grokloc::db;
     use sqlx::Row;
 
     #[async_std::test]

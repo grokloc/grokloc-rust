@@ -23,10 +23,13 @@ impl fmt::Display for Level {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct LevelError;
+#[derive(Debug)]
+#[allow(dead_code)]
+pub enum Err {
+    UnknownLevel,
+}
 
-impl fmt::Display for LevelError {
+impl fmt::Display for Err {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "unknown level")
     }

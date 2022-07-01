@@ -6,8 +6,8 @@ use std::fmt;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub enum Err {
-    OrgStatus,
-    UserStatus,
+    OrgViolation,
+    UserViolation,
     UniquenessViolation,
     SQLx(sqlx::Error),
 }
