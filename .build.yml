@@ -1,0 +1,6 @@
+image: archlinux
+tasks:
+  - say-hello: |
+      echo hello
+  - say-world: |
+      echo world
