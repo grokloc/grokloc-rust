@@ -21,7 +21,7 @@ pub const DEFAULT_KDF_ROUNDS: u32 = bcrypt::DEFAULT_COST;
 #[allow(dead_code)]
 pub const MAX_KDF_ROUNDS: u32 = 31;
 
-/// AESArgError indicates a malformed key or nonce
+/// Err indicates a malformed key or nonce
 #[derive(Debug, PartialEq)]
 pub enum Err {
     KeyLength,

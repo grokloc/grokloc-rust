@@ -5,19 +5,6 @@ use crate::grokloc::env;
 use sqlx;
 use std::fmt;
 
-/// App is the central state access mechanism
-pub struct App {
-    pub level: env::Level,
-    pub master_pool: sqlx::SqlitePool,
-    pub replica_pool: sqlx::SqlitePool,
-    pub kdf_iterations: u32,
-    pub key: String,
-    pub repo_base: String,
-    pub root_org: String,
-    pub root_user: String,
-    pub root_user_api_secret: String,
-}
-
 /// Err abstracts over resource error types
 #[derive(Debug)]
 pub enum Err {
@@ -30,6 +17,19 @@ impl fmt::Display for Err {
             Err::Sqlx(err) => write!(f, "sqlx error {:?}", err),
         }
     }
+}
+
+/// App is the central state access mechanism
+pub struct App {
+    pub level: env::Level,
+    pub master_pool: sqlx::SqlitePool,
+    pub replica_pool: sqlx::SqlitePool,
+    pub kdf_iterations: u32,
+    pub key: String,
+    pub repo_base: String,
+    pub root_org: String,
+    pub root_user: String,
+    pub root_user_api_secret: String,
 }
 
 #[allow(dead_code)]
