@@ -1,4 +1,8 @@
 image: archlinux
+secrets:
+- 46f739e5-4538-45dd-a79f-bf173b7a2ed9
+sources:
+- git@git.sr.ht:~bradclawsie/grokloc-rust
 tasks:
   - say-hello: |
       echo hello
