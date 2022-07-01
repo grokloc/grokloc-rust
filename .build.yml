@@ -1,8 +1,12 @@
 image: archlinux
 tasks:
+  - update-pacman: |
+      sudo pacman -Sy
   - install-pkgs: |
-      pacman --noconfirm -S rust rust-analyzer pkg-config sqlite openssl
-  - say-hello: |
-      echo hello
+      sudo pacman --noconfirm -S rust rust-analyzer pkg-config sqlite openssl gcc
+  - build: |
+      cd /home/build/grokloc-rust && cargo build --verbose
+  - test: |
+      cd /home/build/grokloc-rust && cargo test --verbose
   - ls: |
       ls -ltrah
