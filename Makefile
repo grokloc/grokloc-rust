@@ -7,6 +7,14 @@ PORTS        = -p 3000:3000
 VOLUMES      = -v $(CWD):$(BASE)
 RUN          = $(DOCKER_RUN) $(VOLUMES) -w $(BASE) $(PORTS) $(IMG_DEV)
 
+.PHONY: update
+update:
+	cargo update
+
+.PHONY: upgrade
+update:
+	cargo upgrade
+
 .PHONY: build
 build:
 	cargo build --verbose
