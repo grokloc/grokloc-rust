@@ -7,14 +7,14 @@ pub const STR_MAX: usize = 8192;
 #[allow(dead_code)]
 /// string_is makes sure strings are realtively safe for db use
 fn string_is(s: &str) -> bool {
-    return s.contains("\"")
-        || s.contains("'")
-        || s.contains(">")
-        || s.contains("<")
-        || s.contains("`")
+    s.contains('"')
+        || s.contains('\'')
+        || s.contains('>')
+        || s.contains('<')
+        || s.contains('`')
         || s.contains("&lt;")
         || s.contains("&gt;")
-        || s.len() > STR_MAX;
+        || s.len() > STR_MAX
 }
 
 #[allow(dead_code)]
