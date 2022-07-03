@@ -9,11 +9,11 @@ readme = "README.md"
 # https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bcrypt = "0.10.1"
+bcrypt = "0.13.0"
 hex = "0.4.3"
-openssl-sys = "0.9"
-openssl = "0.10"
-ulid = "0.5.0"
+openssl-sys = "0.9.74"
+openssl = "0.10.40"
 
-sqlx = { version = "0.5", features = [ "runtime-async-std-native-tls", "sqlite", "any" ] }
-async-std = { version = "1", features = [ "attributes" ] }
+uuid = { version = "1.1.2", features = [ "v4", "fast-rng", "macro-diagnostics" ] }
+sqlx = { version = "0.6.0", features = [ "runtime-async-std-native-tls", "sqlite", "any" ] }
+async-std = { version = "1.12.0", features = [ "attributes" ] }

@@ -9,7 +9,6 @@ use openssl::sha::sha256;
 use openssl::symm::decrypt as openssl_decrypt;
 use openssl::symm::encrypt as openssl_encrypt;
 use openssl::symm::Cipher;
-use ulid::Ulid;
 
 pub const KEY_LEN: usize = 32;
 pub const IV_LEN: usize = 32;
@@ -153,12 +152,6 @@ pub fn rand_iv() -> String {
     hex::encode(buf)
 }
 
-/// rand_ulid returns a new random ulid as a String
-#[allow(dead_code)]
-pub fn rand_ulid() -> String {
-    Ulid::new().to_string()
-}
-
 /// sha256_hex returns the hex-encoded String of the sha256 digest of s
 #[allow(dead_code)]
 pub fn sha256_hex(s: &str) -> String {
@@ -243,11 +236,6 @@ mod tests {
     #[test]
     fn crypt_test_rand_nonce() {
         assert!(rand_iv().len() == IV_LEN, "rand_iv");
-    }
-
-    #[test]
-    fn crypt_test_rand_ulid() {
-        assert!(!rand_ulid().is_empty(), "rand_ulid");
     }
 
     #[test]
