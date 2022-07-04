@@ -12,7 +12,7 @@ update:
 	cargo update
 
 .PHONY: upgrade
-update:
+upgrade:
 	cargo upgrade
 
 .PHONY: build
