@@ -5,6 +5,8 @@ use std::time;
 
 pub const STR_MAX: usize = 8192;
 
+pub const UNIXTIME_MAX: u64 = 1767139200;
+
 #[allow(dead_code)]
 /// string_is makes sure strings are realtively safe for db use
 fn string_is(s: &str) -> bool {
@@ -32,7 +34,7 @@ fn unixtime_is(t: &time::SystemTime) -> bool {
     t.duration_since(time::SystemTime::UNIX_EPOCH)
         .expect("duration epoch failure")
         .as_secs()
-        < 1767139200
+        < UNIXTIME_MAX
 }
 
 #[cfg(test)]

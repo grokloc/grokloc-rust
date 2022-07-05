@@ -122,7 +122,7 @@ mod tests {
     use crate::grokloc::db;
     use sqlx::Row;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn schema_test_sqlite_create_schema() -> Result<(), sqlx::Error> {
         let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
