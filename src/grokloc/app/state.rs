@@ -5,7 +5,7 @@ use crate::grokloc::env;
 use sqlx;
 use std::fmt;
 
-/// Err abstracts over resource error types
+/// Err abstracts over state error types
 #[derive(Debug)]
 pub enum Err {
     Sqlx(sqlx::Error),

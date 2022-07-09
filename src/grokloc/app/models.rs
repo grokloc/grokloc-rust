@@ -2,7 +2,7 @@
 use std::fmt;
 
 /// Err covers various generic model errors
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Err {
     UnknownStatus,
 }

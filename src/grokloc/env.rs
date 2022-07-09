@@ -23,7 +23,8 @@ impl fmt::Display for Level {
     }
 }
 
-#[derive(Debug)]
+/// Err covers level errors
+#[derive(Debug, PartialEq)]
 #[allow(dead_code)]
 pub enum Err {
     UnknownLevel,
