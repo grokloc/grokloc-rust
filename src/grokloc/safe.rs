@@ -5,8 +5,22 @@ use std::fmt;
 
 pub const STR_MAX: usize = 8192;
 
+/// Err abstracts over safe-value error types
+#[derive(Debug, PartialEq)]
+pub enum Err {
+    UnsafeString,
+}
+
+impl fmt::Display for Err {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Err::UnsafeString => write!(f, "input string unsafe"),
+        }
+    }
+}
+
 /// string_ok makes sure strings are realtively safe for db use
-fn string_ok(s: &str) -> bool {
+pub fn string_ok(s: &str) -> bool {
     let re_insert = Regex::new(r"insert\s+into").unwrap();
     let re_table = Regex::new(r"(?:drop|create)\s+table").unwrap();
     let re_query = Regex::new(r"(?:select|update)\s+").unwrap();
@@ -25,25 +39,11 @@ fn string_ok(s: &str) -> bool {
         || s.is_empty())
 }
 
-/// Err abstracts over safe-value error types
-#[derive(Debug, PartialEq)]
-pub enum Err {
-    UnsafeString,
-}
-
-impl fmt::Display for Err {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Err::UnsafeString => write!(f, "input string unsafe"),
-        }
-    }
-}
-
 /// VarChar is a string container that proves that the value is safe for db storage
 #[derive(Clone, Debug, PartialEq)]
 #[allow(dead_code)]
 pub struct VarChar {
-    value: String,
+    pub value: String,
 }
 
 impl fmt::Display for VarChar {

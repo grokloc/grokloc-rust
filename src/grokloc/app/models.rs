@@ -58,15 +58,15 @@ impl Status {
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
 pub struct Meta {
-    ctime: chrono::DateTime<chrono::Utc>,
-    mtime: chrono::DateTime<chrono::Utc>,
-    schema_version: i8,
-    status: Status,
+    pub ctime: chrono::DateTime<chrono::Utc>,
+    pub mtime: chrono::DateTime<chrono::Utc>,
+    pub schema_version: i8,
+    pub status: Status,
 }
 
 impl Meta {
     #[allow(dead_code)]
-    fn from_row_vals(
+    pub fn from_row_vals(
         ctime: i64,
         mtime: i64,
         schema_version: i8,
