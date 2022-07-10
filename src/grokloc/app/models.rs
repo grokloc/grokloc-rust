@@ -1,4 +1,6 @@
 //! models contains cross-model definitions
+use crate::grokloc::db;
+use chrono;
 use std::fmt;
 
 /// Err covers various generic model errors
@@ -16,7 +18,6 @@ impl fmt::Display for Err {
 
 /// Status describes model status
 #[derive(Copy, Clone, Debug, PartialEq)]
-#[allow(dead_code)]
 pub enum Status {
     Unconfirmed,
     Active,
@@ -50,5 +51,38 @@ impl Status {
             3 => Ok(Status::Inactive),
             _ => Err(Err::UnknownStatus),
         }
+    }
+}
+
+/// Meta contains key model metadata fields shared by all table models
+#[derive(Copy, Clone, Debug)]
+#[allow(dead_code)]
+pub struct Meta {
+    ctime: chrono::DateTime<chrono::Utc>,
+    mtime: chrono::DateTime<chrono::Utc>,
+    schema_version: i8,
+    status: Status,
+}
+
+impl Meta {
+    #[allow(dead_code)]
+    fn from_row_vals(
+        ctime: i64,
+        mtime: i64,
+        schema_version: i8,
+        status: Status,
+    ) -> Result<Meta, db::Err> {
+        Ok(Meta {
+            ctime: chrono::DateTime::from_utc(
+                chrono::NaiveDateTime::from_timestamp(ctime, 0),
+                chrono::Utc,
+            ),
+            mtime: chrono::DateTime::from_utc(
+                chrono::NaiveDateTime::from_timestamp(mtime, 0),
+                chrono::Utc,
+            ),
+            schema_version,
+            status,
+        })
     }
 }

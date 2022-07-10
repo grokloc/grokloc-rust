@@ -2,11 +2,8 @@
 
 use regex::Regex;
 use std::fmt;
-use std::time;
 
 pub const STR_MAX: usize = 8192;
-
-pub const UNIXTIME_MAX: u64 = 1767139200;
 
 /// string_ok makes sure strings are realtively safe for db use
 fn string_ok(s: &str) -> bool {
@@ -26,15 +23,6 @@ fn string_ok(s: &str) -> bool {
         || re_query.is_match(&lc_s)
         || s.len() > STR_MAX
         || s.is_empty())
-}
-
-#[allow(dead_code)]
-/// unixtime_ok determines if a value is too far in the future and likely in error
-pub fn unixtime_ok(t: &time::SystemTime) -> bool {
-    t.duration_since(time::SystemTime::UNIX_EPOCH)
-        .expect("duration epoch failure")
-        .as_secs()
-        < UNIXTIME_MAX
 }
 
 /// Err abstracts over safe-value error types

@@ -9,6 +9,7 @@ pub enum Err {
     OrgViolation,
     UserViolation,
     UniquenessViolation,
+    BadRowValues,
     SQLx(sqlx::Error),
 }
 
