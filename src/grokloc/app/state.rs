@@ -3,20 +3,13 @@ use crate::grokloc::app::schema;
 use crate::grokloc::crypt;
 use crate::grokloc::env;
 use sqlx;
-use std::fmt;
+use thiserror::Error;
 
 /// Err abstracts over state error types
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Err {
+    #[error("sql error: {0}")]
     Sqlx(sqlx::Error),
-}
-
-impl fmt::Display for Err {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Err::Sqlx(err) => write!(f, "sqlx error {:?}", err),
-        }
-    }
 }
 
 /// App is the central state access mechanism

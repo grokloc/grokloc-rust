@@ -1,22 +1,15 @@
 //! safe provides value filtering functions
-
 use regex::Regex;
 use std::fmt;
+use thiserror::Error;
 
 pub const STR_MAX: usize = 8192;
 
 /// Err abstracts over safe-value error types
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Err {
+    #[error("unsafe string")]
     UnsafeString,
-}
-
-impl fmt::Display for Err {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Err::UnsafeString => write!(f, "input string unsafe"),
-        }
-    }
 }
 
 /// string_ok makes sure strings are realtively safe for db use

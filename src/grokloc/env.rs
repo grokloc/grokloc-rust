@@ -1,5 +1,6 @@
 //! env contains environment specific functions and symbols
 use std::fmt;
+use thiserror::Error;
 
 #[allow(dead_code)]
 pub const GROKLOC_ENV_KEY: &str = "GROKLOC_ENV";
@@ -24,14 +25,9 @@ impl fmt::Display for Level {
 }
 
 /// Err covers level errors
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 #[allow(dead_code)]
 pub enum Err {
+    #[error("unknown level")]
     UnknownLevel,
-}
-
-impl fmt::Display for Err {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "unknown level")
-    }
 }

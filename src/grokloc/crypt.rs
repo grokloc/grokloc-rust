@@ -1,7 +1,4 @@
 //! crypt provides functions and symbols for common encryption patterns
-use std::fmt;
-use std::str;
-
 use bcrypt;
 use hex;
 use openssl::rand::rand_bytes;
@@ -9,6 +6,8 @@ use openssl::sha::sha256;
 use openssl::symm::decrypt as openssl_decrypt;
 use openssl::symm::encrypt as openssl_encrypt;
 use openssl::symm::Cipher;
+use std::str;
+use thiserror::Error;
 
 pub const KEY_LEN: usize = 32;
 pub const IV_LEN: usize = 32;
@@ -21,21 +20,14 @@ pub const DEFAULT_KDF_ROUNDS: u32 = bcrypt::DEFAULT_COST;
 pub const MAX_KDF_ROUNDS: u32 = 31;
 
 /// Err indicates a malformed key or nonce
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Err {
+    #[error("bad key length")]
     KeyLength,
+    #[error("bad iv length")]
     IVLength,
+    #[error("cipher error: {0}")]
     Cipher(String),
-}
-
-impl fmt::Display for Err {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Err::KeyLength => write!(f, "key length must be {}", KEY_LEN),
-            Err::IVLength => write!(f, "iv length must be {}", IV_LEN),
-            Err::Cipher(error_msg) => write!(f, "cipher error {}", error_msg),
-        }
-    }
 }
 
 /// decrypt produces a cleartext message using:
