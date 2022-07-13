@@ -100,12 +100,18 @@ pub fn encrypt(key: &str, iv: &str, m: &str) -> Result<String, Err> {
     }
 }
 
+/// iv_truncate truncates an existing salt seed string to IV_LEN
+#[allow(dead_code)]
+pub fn iv_truncate(s: &str) -> String {
+    let mut v = String::from(s);
+    v.truncate(IV_LEN);
+    v
+}
+
 /// iv constructs a per-input salt String (len: IV_LEN)
 #[allow(dead_code)]
 pub fn iv(s: &str) -> String {
-    let mut v = sha256_hex(s);
-    v.truncate(IV_LEN);
-    v
+    iv_truncate(&sha256_hex(s))
 }
 
 /// kdf creates a safe-to-store password derivation

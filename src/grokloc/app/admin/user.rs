@@ -1,6 +1,7 @@
 //! user models an orgs row and related db functionality
 use crate::grokloc::app::models;
 use crate::grokloc::safe;
+use std::err::Error;
 use uuid;
 
 pub const SCHEMA_VERSION: i8 = 0;
@@ -20,3 +21,11 @@ pub struct Instance {
     pub password: safe::VarChar,
     pub meta: models::Meta,
 }
+
+// pub fn encrypted(
+//     display_name: String,
+//     email: String,
+//     org: uuid::Uuid,
+//     password: String,
+//     key: String,
+// ) -> Result<Instance, Error> {}
