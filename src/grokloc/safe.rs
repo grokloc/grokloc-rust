@@ -6,7 +6,7 @@ use thiserror::Error;
 pub const STR_MAX: usize = 8192;
 
 /// Err abstracts over safe-value error types
-#[derive(Debug, Error, PartialEq)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum Err {
     #[error("unsafe string")]
     UnsafeString,
@@ -79,6 +79,14 @@ mod tests {
     fn varchar_err_test() -> Result<(), Err> {
         let vc = VarChar::new("select col from table");
         assert!(matches!(vc, Err(Err::UnsafeString)));
+        Ok(())
+    }
+
+    #[test]
+    fn clone_test() -> Result<(), Err> {
+        let vc0 = VarChar::new("ok");
+        let vc1 = vc0.clone();
+        assert_eq!(vc0, vc1);
         Ok(())
     }
 }

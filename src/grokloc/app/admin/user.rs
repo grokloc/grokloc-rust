@@ -6,10 +6,10 @@ use uuid;
 
 pub const SCHEMA_VERSION: i8 = 0;
 
-/// Instance is the data representation of an users row
+/// User is the data representation of an users row
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
-pub struct Instance {
+pub struct User {
     pub id: uuid::Uuid,
     pub api_secret: uuid::Uuid,
     pub api_secret_digest: safe::VarChar,
@@ -28,4 +28,4 @@ pub struct Instance {
 //     org: uuid::Uuid,
 //     password: String,
 //     key: String,
-// ) -> Result<Instance, Error> {}
+// ) -> Result<User, Error> {}

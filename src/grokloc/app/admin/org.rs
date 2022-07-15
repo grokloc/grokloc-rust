@@ -5,10 +5,10 @@ use uuid;
 
 pub const SCHEMA_VERSION: i8 = 0;
 
-/// Instance is the data representation of an orgs row
+/// Org is the data representation of an orgs row
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
-pub struct Instance {
+pub struct Org {
     pub id: uuid::Uuid,
     pub name: safe::VarChar,
     pub owner: uuid::Uuid,
