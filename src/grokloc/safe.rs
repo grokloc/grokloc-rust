@@ -15,7 +15,7 @@ pub enum Err {
 /// string_ok makes sure strings are realtively safe for db use
 pub fn string_ok(s: &str) -> bool {
     let re_insert = Regex::new(r"insert\s+into").unwrap();
-    let re_table = Regex::new(r"(?:drop|create)\s+table").unwrap();
+    let re_table = Regex::new(r"(?:drop|create)\s+(table|database)").unwrap();
     let re_query = Regex::new(r"(?:select|update)\s+").unwrap();
     let lc_s = s.to_lowercase();
     !(s.contains('"')
@@ -35,25 +35,21 @@ pub fn string_ok(s: &str) -> bool {
 /// VarChar is a string container that proves that the value is safe for db storage
 #[derive(Clone, Debug, PartialEq)]
 #[allow(dead_code)]
-pub struct VarChar {
-    pub value: String,
+pub struct VarChar(String);
+
+#[allow(dead_code)]
+impl VarChar {
+    fn new(raw: &str) -> Result<VarChar, Err> {
+        match string_ok(raw) {
+            true => Ok(VarChar(raw.to_string())),
+            false => Err(Err::UnsafeString),
+        }
+    }
 }
 
 impl fmt::Display for VarChar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl VarChar {
-    #[allow(dead_code)]
-    fn new(raw: &str) -> Result<VarChar, Err> {
-        match string_ok(raw) {
-            true => Ok(VarChar {
-                value: raw.to_string(),
-            }),
-            false => Err(Err::UnsafeString),
-        }
+        write!(f, "{}", self.0)
     }
 }
 
@@ -75,7 +71,7 @@ mod tests {
 
     #[test]
     fn varchar_ok_test() -> Result<(), Err> {
-        assert_eq!(VarChar::new("ok")?.value, "ok");
+        assert_eq!(VarChar::new("ok")?.to_string(), "ok");
         Ok(())
     }
 
