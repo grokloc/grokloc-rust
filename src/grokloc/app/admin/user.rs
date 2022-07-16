@@ -36,7 +36,9 @@ pub fn encrypted(
     // per-user iv is derived from the email address as follows:
     let email_digest = crypt::sha256_hex(&email.to_string()); // as String
     let iv = crypt::iv_truncate(&email_digest);
+
     let api_secret = safe::VarChar::new(&Uuid::new_v4().to_string())?;
+
     Ok(User {
         id: Uuid::new_v4(),
         api_secret: safe::VarChar::new(&crypt::encrypt(key, &iv, &api_secret.to_string())?)?,
@@ -52,4 +54,54 @@ pub fn encrypted(
             ..Default::default()
         },
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_encrypted_test() -> Result<(), Box<dyn Error>> {
+        let key = crypt::rand_key();
+        let display_name = safe::VarChar::rand();
+        let email = safe::VarChar::rand();
+        let org = Uuid::new_v4();
+        let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+        let user = encrypted(&display_name, &email, &org, &password, &key)?;
+
+        let email_digest = crypt::sha256_hex(&email.to_string());
+        let iv = crypt::iv_truncate(&email_digest);
+
+        let decrypted_api_secret = crypt::decrypt(&key, &iv, &user.api_secret.to_string())?;
+
+        assert_eq!(
+            crypt::sha256_hex(&decrypted_api_secret),
+            user.api_secret_digest.to_string(),
+            "api_secret_digest"
+        );
+
+        let decrypted_display_name = crypt::decrypt(&key, &iv, &user.display_name.to_string())?;
+        assert_eq!(
+            &decrypted_display_name,
+            &display_name.to_string(),
+            "display name"
+        );
+
+        assert_eq!(
+            crypt::sha256_hex(&display_name.to_string()),
+            user.display_name_digest.to_string(),
+            "display_name_digest"
+        );
+
+        let decrypted_email = crypt::decrypt(&key, &iv, &user.email.to_string())?;
+        assert_eq!(&decrypted_email, &email.to_string(), "email");
+
+        assert_eq!(email_digest, user.email_digest.to_string(), "email_digest");
+
+        assert_eq!(org, user.org, "org");
+
+        assert_eq!(password, user.password, "password");
+
+        Ok(())
+    }
 }

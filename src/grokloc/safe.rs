@@ -1,4 +1,5 @@
 //! safe provides value filtering functions
+use crate::grokloc::crypt;
 use regex::Regex;
 use std::fmt;
 use thiserror::Error;
@@ -39,11 +40,17 @@ pub struct VarChar(String);
 
 #[allow(dead_code)]
 impl VarChar {
+    /// new produces a VarChar iff the input string is safe
     pub fn new(raw: &str) -> Result<VarChar, Err> {
         match string_ok(raw) {
             true => Ok(VarChar(raw.to_string())),
             false => Err(Err::UnsafeString),
         }
+    }
+
+    /// rand produces a (long!) random string from a uuid
+    pub fn rand() -> VarChar {
+        VarChar(crypt::rand_hex())
     }
 }
 
