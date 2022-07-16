@@ -6,7 +6,7 @@ use thiserror::Error;
 pub const STR_MAX: usize = 8192;
 
 /// Err abstracts over safe-value error types
-#[derive(Clone, Debug, Error, PartialEq)]
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
 pub enum Err {
     #[error("unsafe string")]
     UnsafeString,
@@ -39,7 +39,7 @@ pub struct VarChar(String);
 
 #[allow(dead_code)]
 impl VarChar {
-    fn new(raw: &str) -> Result<VarChar, Err> {
+    pub fn new(raw: &str) -> Result<VarChar, Err> {
         match string_ok(raw) {
             true => Ok(VarChar(raw.to_string())),
             false => Err(Err::UnsafeString),

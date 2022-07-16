@@ -3,10 +3,11 @@ use crate::grokloc::app::models;
 use crate::grokloc::safe;
 use uuid;
 
+#[allow(dead_code)]
 pub const SCHEMA_VERSION: i8 = 0;
 
 /// Org is the data representation of an orgs row
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub struct Org {
     pub id: uuid::Uuid,

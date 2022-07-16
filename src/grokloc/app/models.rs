@@ -1,7 +1,7 @@
 //! models contains cross-model definitions
 use crate::grokloc::db;
 use chrono;
-use std::fmt;
+use std::{default, fmt};
 use thiserror::Error;
 
 /// Err covers various generic model errors
@@ -12,8 +12,9 @@ pub enum Err {
 }
 
 /// Status describes model status
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub enum Status {
+    #[default]
     Unconfirmed,
     Active,
     Inactive,
@@ -57,6 +58,23 @@ pub struct Meta {
     pub mtime: chrono::DateTime<chrono::Utc>,
     pub schema_version: i8,
     pub status: Status,
+}
+
+impl default::Default for Meta {
+    fn default() -> Self {
+        Meta {
+            ctime: chrono::DateTime::from_utc(
+                chrono::NaiveDateTime::from_timestamp(0, 0),
+                chrono::Utc,
+            ),
+            mtime: chrono::DateTime::from_utc(
+                chrono::NaiveDateTime::from_timestamp(0, 0),
+                chrono::Utc,
+            ),
+            schema_version: 0,
+            status: Status::Unconfirmed,
+        }
+    }
 }
 
 impl Meta {

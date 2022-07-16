@@ -20,7 +20,7 @@ pub const DEFAULT_KDF_ROUNDS: u32 = bcrypt::DEFAULT_COST;
 pub const MAX_KDF_ROUNDS: u32 = 31;
 
 /// Err indicates a malformed key or nonce
-#[derive(Debug, Error, PartialEq)]
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum Err {
     #[error("bad key length")]
     KeyLength,

@@ -1,10 +1,10 @@
 //! schema contains db schemas and related definitions
 
 #[allow(dead_code)]
-pub static ORGS_TABLENAME: &str = "orgs";
+pub const ORGS_TABLENAME: &str = "orgs";
 
 #[allow(dead_code)]
-pub static USERS_TABLENAME: &str = "users";
+pub const USERS_TABLENAME: &str = "users";
 
 pub static APP_CREATE_SCHEMA_SQLITE: &str = r#"
 create table if not exists users (
