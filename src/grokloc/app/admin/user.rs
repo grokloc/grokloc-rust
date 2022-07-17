@@ -2,10 +2,28 @@
 use crate::grokloc::app::models;
 use crate::grokloc::crypt;
 use crate::grokloc::safe;
+use sqlx;
 use std::error::Error;
 use uuid::Uuid;
 
 pub const SCHEMA_VERSION: i8 = 0;
+
+pub const INSERT_QUERY: &str = r#"
+insert into users
+(id,
+ api_secret,
+ api_secret_digest,
+ display_name,
+ display_name_digest,
+ email,
+ email_digest,
+ org,
+ password,
+ status,
+ schema_version)
+ values
+(?,?,?,?,?,?,?,?,?,?,?)
+"#;
 
 /// User is the data representation of an users row
 #[derive(Clone, Debug)]
@@ -34,7 +52,7 @@ pub fn encrypted(
     key: &str,
 ) -> Result<User, Box<dyn Error>> {
     // per-user iv is derived from the email address as follows:
-    let email_digest = crypt::sha256_hex(&email.to_string()); // as String
+    let email_digest = crypt::sha256_hex(&email.to_string());
     let iv = crypt::iv_truncate(&email_digest);
 
     let api_secret = safe::VarChar::new(&Uuid::new_v4().to_string())?;
@@ -54,6 +72,34 @@ pub fn encrypted(
             ..Default::default()
         },
     })
+}
+
+impl User {
+    /// insert performs db insert with no integrity check on the org (see "create")
+    ///
+    /// assumed to be called within an existing transaction that includes
+    /// consistency checks, so connection handle is a sqlx::Transaction
+    #[allow(dead_code)]
+    pub async fn insert(
+        &self,
+        txn: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(INSERT_QUERY)
+            .bind(self.id.to_string())
+            .bind(self.api_secret.to_string())
+            .bind(self.api_secret_digest.to_string())
+            .bind(self.display_name.to_string())
+            .bind(self.display_name_digest.to_string())
+            .bind(self.email.to_string())
+            .bind(self.email_digest.to_string())
+            .bind(self.org.to_string())
+            .bind(self.password.to_string())
+            .bind(self.meta.status.to_int())
+            .bind(self.meta.schema_version)
+            .execute(txn)
+            .await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
