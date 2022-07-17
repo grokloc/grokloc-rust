@@ -29,7 +29,7 @@ impl fmt::Display for Status {
 
 impl Status {
     /// translate a Status to its database representation
-    pub fn to_int(&self) -> i64 {
+    pub fn to_int(self) -> i64 {
         match self {
             Status::Unconfirmed => 1,
             Status::Active => 2,
