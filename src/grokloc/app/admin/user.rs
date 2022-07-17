@@ -1,6 +1,5 @@
 //! user models an orgs row and related db functionality
 use crate::grokloc::app::models;
-use crate::grokloc::app::schema;
 use crate::grokloc::crypt;
 use crate::grokloc::safe;
 use sqlx;
@@ -106,6 +105,7 @@ impl User {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::grokloc::app::schema;
 
     #[test]
     fn user_encrypted_test() -> Result<(), Box<dyn Error>> {
