@@ -1,3 +1,4 @@
+IMG_BASE     = rust:slim-bullseye
 IMG_DEV      = grokloc/grokloc-rs:dev
 DOCKER       = docker
 DOCKER_RUN   = $(DOCKER) run --rm -it
@@ -36,7 +37,11 @@ all: test clippy fmt
 
 .PHONY: docker
 docker:
+	$(DOCKER) pull $(IMG_BASE)
 	$(DOCKER) build . -f Dockerfile -t $(IMG_DEV)
+	$(DOCKER) system prune -f
+	$(DOCKER) system prune -f
+	$(DOCKER) system prune -f
 
 .PHONY: docker-push
 docker-push:
@@ -44,7 +49,11 @@ docker-push:
 
 .PHONY: docker-pull
 docker-pull:
+	$(DOCKER) pull $(IMG_BASE)
 	$(DOCKER) pull $(IMG_DEV)
+	$(DOCKER) system prune -f
+	$(DOCKER) system prune -f
+	$(DOCKER) system prune -f
 
 .PHONY: shell
 shell:
