@@ -1,5 +1,6 @@
 //! user models an orgs row and related db functionality
 use crate::grokloc::app::models;
+use crate::grokloc::app::schema;
 use crate::grokloc::crypt;
 use crate::grokloc::safe;
 use sqlx;
@@ -147,6 +148,32 @@ mod tests {
         assert_eq!(org, user.org, "org");
 
         assert_eq!(password, user.password, "password");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn user_insert_test() -> Result<(), Box<dyn Error>> {
+        // build the user
+        let key = crypt::rand_key();
+        let display_name = safe::VarChar::rand();
+        let email = safe::VarChar::rand();
+        let org = Uuid::new_v4();
+        let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+        let user = encrypted(&display_name, &email, &org, &password, &key)?;
+
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        // insert the user
+        let mut txn = pool.begin().await?;
+        user.insert(&mut txn).await?;
+        // implicit rollback
 
         Ok(())
     }
