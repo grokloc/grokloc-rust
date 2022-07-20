@@ -1,6 +1,7 @@
 //! user models an orgs row and related db functionality
 use crate::grokloc::app::models;
 use crate::grokloc::crypt;
+use crate::grokloc::db;
 use crate::grokloc::safe;
 use sqlx;
 use std::error::Error;
@@ -23,6 +24,24 @@ insert into users
  schema_version)
  values
 (?,?,?,?,?,?,?,?,?,?,?)
+"#;
+
+#[allow(dead_code)]
+pub const SELECT_QUERY: &str = r#"
+    select
+    api_secret,
+    api_secret_digest,
+    display_name,
+    display_name_digest,
+    email,
+    email_digest,
+    org,
+    password,
+    schema_version,
+    status,
+    ctime,
+    mtime
+    from users where id = ?;
 "#;
 
 /// User is the data representation of an users row
@@ -83,8 +102,8 @@ impl User {
     pub async fn insert(
         &self,
         txn: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query(INSERT_QUERY)
+    ) -> Result<(), db::Err> {
+        if let Err(insert_error) = sqlx::query(INSERT_QUERY)
             .bind(self.id.to_string())
             .bind(self.api_secret.to_string())
             .bind(self.api_secret_digest.to_string())
@@ -97,7 +116,10 @@ impl User {
             .bind(self.meta.status.to_int())
             .bind(self.meta.schema_version)
             .execute(txn)
-            .await?;
+            .await
+        {
+            return Err(db::Err::SQLx(insert_error)); // implicit rollback
+        }
         Ok(())
     }
 }
