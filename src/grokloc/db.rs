@@ -14,6 +14,8 @@ pub enum Err {
     UniquenessViolation,
     #[error("bad row values")]
     BadRowValues,
+    #[error("bad status value")]
+    BadStatusValue,
     #[error("sql error: {0}")]
     SQLx(sqlx::Error),
 }

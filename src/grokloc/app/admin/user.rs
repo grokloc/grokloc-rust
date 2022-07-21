@@ -70,16 +70,14 @@ pub fn encrypted(
     password: &safe::VarChar, // assumed already derived
     key: &str,
 ) -> Result<User, Box<dyn Error>> {
-    // per-user iv is derived from the email address as follows:
     let email_digest = crypt::sha256_hex(&email.to_string());
-    let iv = crypt::iv_truncate(&email_digest);
-
-    let api_secret = safe::VarChar::new(&Uuid::new_v4().to_string())?;
+    let iv = crypt::iv(&email_digest);
+    let api_secret_ = Uuid::new_v4();
 
     Ok(User {
         id: Uuid::new_v4(),
-        api_secret: safe::VarChar::new(&crypt::encrypt(key, &iv, &api_secret.to_string())?)?,
-        api_secret_digest: safe::VarChar::new(&crypt::sha256_hex(&api_secret.to_string()))?,
+        api_secret: safe::VarChar::new(&crypt::encrypt(key, &iv, &api_secret_.to_string())?)?,
+        api_secret_digest: safe::VarChar::new(&crypt::sha256_hex(&api_secret_.to_string()))?,
         display_name: safe::VarChar::new(&crypt::encrypt(key, &iv, &display_name.to_string())?)?,
         display_name_digest: safe::VarChar::new(&crypt::sha256_hex(&display_name.to_string()))?,
         email: safe::VarChar::new(&crypt::encrypt(key, &iv, &email.to_string())?)?,
@@ -122,6 +120,54 @@ impl User {
         }
         Ok(())
     }
+
+    // pub async fn read(pool: sqlx::SqlitePool, id: &str, key: &str) -> Result<Self, db::Err> {
+    //     let row = match sqlx::query(SELECT_QUERY).bind(id).fetch_one(pool).await {
+    //         Err(error) => return Err(db::Err::SQLx(error)),
+    //         Ok(v) => v,
+    //     };
+    //     let email_digest_ = match row.try_get::<String, _>("email_digest") {
+    //         Err(error) => return Err(db::Err::SQLx(error)),
+    //         Ok(v) => v,
+    //     };
+    //     let iv = crypt::iv_truncate(&email_digest);
+    //     let encrypted_api_secret = match row.try_get::<String, _>("api_secret") {
+    //         Err(error) => return Err(db::Err::SQLx(error)),
+    //         Ok(v) => v,
+    //     };
+    //     let api_secret_ = match crypt::decrypt(key, &iv, &encrypted_api_secret) {
+    //         Ok(c) => c,
+    //         Err(error) => panic!("decrypt api secret: {:?}", error),
+    //     };
+    //     let encrypted_display_name = match row.try_get::<String, _>("display_name") {
+    //         Err(error) => return Err(db::Err::SQLx(error)),
+    //         Ok(v) => v,
+    //     };
+    //     let display_name_ = match crypt::decrypt(key, &iv, &encrypted_display_name) {
+    //         Ok(c) => c,
+    //         Err(error) => panic!("decrypt display name: {:?}", error),
+    //     };
+    //     let encrypted_email = match row.try_get::<String, _>("email") {
+    //         Err(error) => return Err(db::Err::SQLx(error)),
+    //         Ok(v) => v,
+    //     };
+    //     let email_ = match crypt::decrypt(key, &iv, &encrypted_email) {
+    //         Ok(c) => c,
+    //         Err(error) => panic!("decrypt email: {:?}", error),
+    //     };
+    //     Ok(Self {
+    //         id: Uuid::try_parse(row.try_get::<String, _>("id")?)?,
+    //         api_secret: Uuid::try_parse(&api_secret_)?,
+    //         display_name: safe::VarChar::new(&display_name_)?,
+    //         display_name_digest: safe::VarChar::new(
+    //             &row.try_get::<String, _>("display_name_digest")?,
+    //         )?,
+    //         email: safe::VarChar::new(&email_)?,
+    //         email_digest: safe::VarChar::new(&email_digest)?,
+    //         org: Uuid::try_parse(row.try_get::<String, _>("org")?)?,
+    //         password: safe::VarChar::new(&row.try_get::<String, _>("password")?)?,
+    //     })
+    // }
 }
 
 #[cfg(test)]
@@ -139,7 +185,7 @@ mod tests {
         let user = encrypted(&display_name, &email, &org, &password, &key)?;
 
         let email_digest = crypt::sha256_hex(&email.to_string());
-        let iv = crypt::iv_truncate(&email_digest);
+        let iv = crypt::iv(&email_digest);
 
         let decrypted_api_secret = crypt::decrypt(&key, &iv, &user.api_secret.to_string())?;
 
