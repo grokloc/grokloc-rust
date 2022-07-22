@@ -121,6 +121,7 @@ impl User {
         Ok(())
     }
 
+    /// read selects and decrypts a users row to construct a User instance
     #[allow(dead_code)]
     pub async fn read(pool: sqlx::SqlitePool, id: &str, key: &str) -> Result<Self, anyhow::Error> {
         let row = sqlx::query(SELECT_QUERY).bind(id).fetch_one(&pool).await?;
@@ -132,7 +133,7 @@ impl User {
         let display_name_ = crypt::decrypt(key, &iv, &encrypted_display_name)?;
         let encrypted_email = row.try_get::<String, _>("email")?;
         let email_ = crypt::decrypt(key, &iv, &encrypted_email)?;
-        //Err(db::Err::BadRowValues.into())
+
         Ok(Self {
             id: Uuid::try_parse(&row.try_get::<String, _>("id")?)?,
             api_secret: safe::VarChar::new(&api_secret_)?,
