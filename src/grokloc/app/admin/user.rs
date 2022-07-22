@@ -1,10 +1,10 @@
 //! user models an orgs row and related db functionality
 use crate::grokloc::app::models;
 use crate::grokloc::crypt;
-use crate::grokloc::db;
 use crate::grokloc::safe;
+use anyhow;
 use sqlx;
-use std::error::Error;
+use sqlx::Row;
 use uuid::Uuid;
 
 pub const SCHEMA_VERSION: i8 = 0;
@@ -69,7 +69,7 @@ pub fn encrypted(
     org: &Uuid,
     password: &safe::VarChar, // assumed already derived
     key: &str,
-) -> Result<User, Box<dyn Error>> {
+) -> Result<User, anyhow::Error> {
     let email_digest = crypt::sha256_hex(&email.to_string());
     let iv = crypt::iv(&email_digest);
     let api_secret_ = Uuid::new_v4();
@@ -100,7 +100,7 @@ impl User {
     pub async fn insert(
         &self,
         txn: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    ) -> Result<(), db::Err> {
+    ) -> Result<(), anyhow::Error> {
         if let Err(insert_error) = sqlx::query(INSERT_QUERY)
             .bind(self.id.to_string())
             .bind(self.api_secret.to_string())
@@ -116,58 +116,43 @@ impl User {
             .execute(txn)
             .await
         {
-            return Err(db::Err::SQLx(insert_error)); // implicit rollback
+            return Err(insert_error.into());
         }
         Ok(())
     }
 
-    // pub async fn read(pool: sqlx::SqlitePool, id: &str, key: &str) -> Result<Self, db::Err> {
-    //     let row = match sqlx::query(SELECT_QUERY).bind(id).fetch_one(pool).await {
-    //         Err(error) => return Err(db::Err::SQLx(error)),
-    //         Ok(v) => v,
-    //     };
-    //     let email_digest_ = match row.try_get::<String, _>("email_digest") {
-    //         Err(error) => return Err(db::Err::SQLx(error)),
-    //         Ok(v) => v,
-    //     };
-    //     let iv = crypt::iv_truncate(&email_digest);
-    //     let encrypted_api_secret = match row.try_get::<String, _>("api_secret") {
-    //         Err(error) => return Err(db::Err::SQLx(error)),
-    //         Ok(v) => v,
-    //     };
-    //     let api_secret_ = match crypt::decrypt(key, &iv, &encrypted_api_secret) {
-    //         Ok(c) => c,
-    //         Err(error) => panic!("decrypt api secret: {:?}", error),
-    //     };
-    //     let encrypted_display_name = match row.try_get::<String, _>("display_name") {
-    //         Err(error) => return Err(db::Err::SQLx(error)),
-    //         Ok(v) => v,
-    //     };
-    //     let display_name_ = match crypt::decrypt(key, &iv, &encrypted_display_name) {
-    //         Ok(c) => c,
-    //         Err(error) => panic!("decrypt display name: {:?}", error),
-    //     };
-    //     let encrypted_email = match row.try_get::<String, _>("email") {
-    //         Err(error) => return Err(db::Err::SQLx(error)),
-    //         Ok(v) => v,
-    //     };
-    //     let email_ = match crypt::decrypt(key, &iv, &encrypted_email) {
-    //         Ok(c) => c,
-    //         Err(error) => panic!("decrypt email: {:?}", error),
-    //     };
-    //     Ok(Self {
-    //         id: Uuid::try_parse(row.try_get::<String, _>("id")?)?,
-    //         api_secret: Uuid::try_parse(&api_secret_)?,
-    //         display_name: safe::VarChar::new(&display_name_)?,
-    //         display_name_digest: safe::VarChar::new(
-    //             &row.try_get::<String, _>("display_name_digest")?,
-    //         )?,
-    //         email: safe::VarChar::new(&email_)?,
-    //         email_digest: safe::VarChar::new(&email_digest)?,
-    //         org: Uuid::try_parse(row.try_get::<String, _>("org")?)?,
-    //         password: safe::VarChar::new(&row.try_get::<String, _>("password")?)?,
-    //     })
-    // }
+    #[allow(dead_code)]
+    pub async fn read(pool: sqlx::SqlitePool, id: &str, key: &str) -> Result<Self, anyhow::Error> {
+        let row = sqlx::query(SELECT_QUERY).bind(id).fetch_one(&pool).await?;
+        let email_digest_ = row.try_get::<String, _>("email_digest")?;
+        let iv = crypt::iv_truncate(&email_digest_);
+        let encrypted_api_secret = row.try_get::<String, _>("api_secret")?;
+        let api_secret_ = crypt::decrypt(key, &iv, &encrypted_api_secret)?;
+        let encrypted_display_name = row.try_get::<String, _>("display_name")?;
+        let display_name_ = crypt::decrypt(key, &iv, &encrypted_display_name)?;
+        let encrypted_email = row.try_get::<String, _>("email")?;
+        let email_ = crypt::decrypt(key, &iv, &encrypted_email)?;
+        //Err(db::Err::BadRowValues.into())
+        Ok(Self {
+            id: Uuid::try_parse(&row.try_get::<String, _>("id")?)?,
+            api_secret: safe::VarChar::new(&api_secret_)?,
+            api_secret_digest: safe::VarChar::new(&row.try_get::<String, _>("api_secret_digest")?)?,
+            display_name: safe::VarChar::new(&display_name_)?,
+            display_name_digest: safe::VarChar::new(
+                &row.try_get::<String, _>("display_name_digest")?,
+            )?,
+            email: safe::VarChar::new(&email_)?,
+            email_digest: safe::VarChar::new(&email_digest_)?,
+            org: Uuid::try_parse(&row.try_get::<String, _>("org")?)?,
+            password: safe::VarChar::new(&row.try_get::<String, _>("password")?)?,
+            meta: models::Meta::from_db(
+                row.try_get::<i64, _>("ctime")?,
+                row.try_get::<i64, _>("mtime")?,
+                row.try_get::<i8, _>("schema_version")?,
+                row.try_get::<i64, _>("status")?,
+            )?,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -176,7 +161,7 @@ mod tests {
     use crate::grokloc::app::schema;
 
     #[test]
-    fn user_encrypted_test() -> Result<(), Box<dyn Error>> {
+    fn user_encrypted_test() -> Result<(), anyhow::Error> {
         let key = crypt::rand_key();
         let display_name = safe::VarChar::rand();
         let email = safe::VarChar::rand();
@@ -221,7 +206,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn user_insert_test() -> Result<(), Box<dyn Error>> {
+    async fn user_insert_test() -> Result<(), anyhow::Error> {
         // build the user
         let key = crypt::rand_key();
         let display_name = safe::VarChar::rand();

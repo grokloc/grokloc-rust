@@ -14,25 +14,6 @@ pub enum Err {
     UniquenessViolation,
     #[error("bad row values")]
     BadRowValues,
-    #[error("bad status value")]
-    BadStatusValue,
-    #[error("sql error: {0}")]
-    SQLx(sqlx::Error),
-}
-
-impl Err {
-    #[allow(dead_code)]
-    pub fn is_sqlx_duplicate(&self) -> bool {
-        match self {
-            Self::SQLx(error) => sqlx_duplicate(error),
-            _ => false,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn is_sqlx_row_not_found(&self) -> bool {
-        matches!(self, Self::SQLx(sqlx::Error::RowNotFound))
-    }
 }
 
 /// sqlx_duplicate should match unique constraints for sqlite and pg
@@ -42,3 +23,5 @@ pub fn sqlx_duplicate(error: &sqlx::Error) -> bool {
     s.make_ascii_lowercase();
     s.contains("unique constraint")
 }
+
+// to match row not found, just match an error to be sqlx::Error::RowNotFound

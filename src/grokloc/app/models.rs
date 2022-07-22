@@ -1,7 +1,14 @@
 //! models contains cross-model definitions
-use crate::grokloc::db;
 use chrono;
 use std::{default, fmt};
+use thiserror::Error;
+
+/// Err covers various generic model errors
+#[derive(Debug, Error, PartialEq)]
+pub enum Err {
+    #[error("unknown status")]
+    UnknownStatus,
+}
 
 /// Status describes model status
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
@@ -31,14 +38,12 @@ impl Status {
 
     /// translate a Status from its database representation
     #[allow(dead_code)]
-    pub fn from_int(i: i64) -> Result<Self, db::Err> {
+    pub fn from_int(i: i64) -> Result<Self, Err> {
         match i {
             1 => Ok(Status::Unconfirmed),
             2 => Ok(Status::Active),
             3 => Ok(Status::Inactive),
-            // since reading from an int is almost certainly done reading
-            // from the db, use the db error
-            _ => Err(db::Err::BadStatusValue),
+            _ => Err(Err::UnknownStatus),
         }
     }
 }
@@ -72,12 +77,7 @@ impl default::Default for Meta {
 
 impl Meta {
     #[allow(dead_code)]
-    pub fn from_db(
-        ctime: i64,
-        mtime: i64,
-        schema_version: i8,
-        status: i64,
-    ) -> Result<Meta, db::Err> {
+    pub fn from_db(ctime: i64, mtime: i64, schema_version: i8, status: i64) -> Result<Meta, Err> {
         Ok(Meta {
             ctime: chrono::DateTime::from_utc(
                 chrono::NaiveDateTime::from_timestamp(ctime, 0),
