@@ -60,38 +60,47 @@ pub struct User {
     pub meta: models::Meta,
 }
 
-/// encrypted makes a new User with PII fields encrypted with key as key
-/// and salt derived from the email (which is constrained to be unique in the db)
-#[allow(dead_code)]
-pub fn encrypted(
-    display_name: &safe::VarChar,
-    email: &safe::VarChar,
-    org: &Uuid,
-    password: &safe::VarChar, // assumed already derived
-    key: &str,
-) -> Result<User, anyhow::Error> {
-    let email_digest = crypt::sha256_hex(&email.to_string());
-    let iv = crypt::iv(&email_digest);
-    let api_secret_ = Uuid::new_v4();
-
-    Ok(User {
-        id: Uuid::new_v4(),
-        api_secret: safe::VarChar::new(&crypt::encrypt(key, &iv, &api_secret_.to_string())?)?,
-        api_secret_digest: safe::VarChar::new(&crypt::sha256_hex(&api_secret_.to_string()))?,
-        display_name: safe::VarChar::new(&crypt::encrypt(key, &iv, &display_name.to_string())?)?,
-        display_name_digest: safe::VarChar::new(&crypt::sha256_hex(&display_name.to_string()))?,
-        email: safe::VarChar::new(&crypt::encrypt(key, &iv, &email.to_string())?)?,
-        email_digest: safe::VarChar::new(&email_digest)?,
-        org: *org,
-        password: password.clone(),
-        meta: models::Meta {
-            schema_version: SCHEMA_VERSION,
-            ..Default::default()
-        },
-    })
-}
-
 impl User {
+    /// encrypted makes a new User with PII fields encrypted with key as key
+    /// and salt derived from the email (which is constrained to be unique in the db)
+    ///
+    /// if you want a decrypted User, you must read() it from the db
+    ///
+    /// this is because User's will have referential integrity checks only upon
+    /// calling create(), and decrypted Users should always be valid
+    #[allow(dead_code)]
+    pub fn encrypted(
+        display_name: &safe::VarChar,
+        email: &safe::VarChar,
+        org: &Uuid,
+        password: &safe::VarChar, // assumed already derived
+        key: &str,
+    ) -> Result<User, anyhow::Error> {
+        let email_digest = crypt::sha256_hex(&email.to_string());
+        let iv = crypt::iv(&email_digest);
+        let api_secret_ = Uuid::new_v4();
+
+        Ok(User {
+            id: Uuid::new_v4(),
+            api_secret: safe::VarChar::new(&crypt::encrypt(key, &iv, &api_secret_.to_string())?)?,
+            api_secret_digest: safe::VarChar::new(&crypt::sha256_hex(&api_secret_.to_string()))?,
+            display_name: safe::VarChar::new(&crypt::encrypt(
+                key,
+                &iv,
+                &display_name.to_string(),
+            )?)?,
+            display_name_digest: safe::VarChar::new(&crypt::sha256_hex(&display_name.to_string()))?,
+            email: safe::VarChar::new(&crypt::encrypt(key, &iv, &email.to_string())?)?,
+            email_digest: safe::VarChar::new(&email_digest)?,
+            org: *org,
+            password: password.clone(),
+            meta: models::Meta {
+                schema_version: SCHEMA_VERSION,
+                ..Default::default()
+            },
+        })
+    }
+
     /// insert performs db insert with no integrity check on the org (see "create")
     ///
     /// assumed to be called within an existing transaction that includes
@@ -123,10 +132,17 @@ impl User {
 
     /// read selects and decrypts a users row to construct a User instance
     #[allow(dead_code)]
-    pub async fn read(pool: sqlx::SqlitePool, id: &str, key: &str) -> Result<Self, anyhow::Error> {
-        let row = sqlx::query(SELECT_QUERY).bind(id).fetch_one(&pool).await?;
+    pub async fn read(
+        pool: &sqlx::SqlitePool,
+        id: &Uuid,
+        key: &str,
+    ) -> Result<Self, anyhow::Error> {
+        let row = sqlx::query(SELECT_QUERY)
+            .bind(&id.to_string())
+            .fetch_one(pool)
+            .await?;
         let email_digest_ = row.try_get::<String, _>("email_digest")?;
-        let iv = crypt::iv_truncate(&email_digest_);
+        let iv = crypt::iv(&email_digest_);
         let encrypted_api_secret = row.try_get::<String, _>("api_secret")?;
         let api_secret_ = crypt::decrypt(key, &iv, &encrypted_api_secret)?;
         let encrypted_display_name = row.try_get::<String, _>("display_name")?;
@@ -135,7 +151,7 @@ impl User {
         let email_ = crypt::decrypt(key, &iv, &encrypted_email)?;
 
         Ok(Self {
-            id: Uuid::try_parse(&row.try_get::<String, _>("id")?)?,
+            id: *id,
             api_secret: safe::VarChar::new(&api_secret_)?,
             api_secret_digest: safe::VarChar::new(&row.try_get::<String, _>("api_secret_digest")?)?,
             display_name: safe::VarChar::new(&display_name_)?,
@@ -168,7 +184,7 @@ mod tests {
         let email = safe::VarChar::rand();
         let org = Uuid::new_v4();
         let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
-        let user = encrypted(&display_name, &email, &org, &password, &key)?;
+        let user = User::encrypted(&display_name, &email, &org, &password, &key)?;
 
         let email_digest = crypt::sha256_hex(&email.to_string());
         let iv = crypt::iv(&email_digest);
@@ -214,7 +230,7 @@ mod tests {
         let email = safe::VarChar::rand();
         let org = Uuid::new_v4();
         let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
-        let user = encrypted(&display_name, &email, &org, &password, &key)?;
+        let user = User::encrypted(&display_name, &email, &org, &password, &key)?;
 
         // create the db
         let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
@@ -228,6 +244,52 @@ mod tests {
         let mut txn = pool.begin().await?;
         user.insert(&mut txn).await?;
         // implicit rollback
+        txn.commit().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn user_read_test() -> Result<(), anyhow::Error> {
+        // build the user
+        let key = crypt::rand_key();
+        let display_name = safe::VarChar::rand();
+        let email = safe::VarChar::rand();
+        let org = Uuid::new_v4();
+        let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+        let user = User::encrypted(&display_name, &email, &org, &password, &key)?;
+
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        // insert the user
+        let mut txn = pool.begin().await?;
+        user.insert(&mut txn).await?;
+        // implicit rollback
+        txn.commit().await?;
+
+        // read that user
+        let user_read = match User::read(&pool, &user.id, &key).await {
+            Err(_) => unreachable!(),
+            Ok(v) => v,
+        };
+
+        assert_eq!(user.id, user_read.id);
+
+        // user.api_secret is encrypted
+        assert_ne!(user.api_secret, user_read.api_secret);
+
+        // user.display_name is encrypted
+        assert_ne!(user.display_name, user_read.display_name);
+        assert_eq!(user.display_name_digest, user_read.display_name_digest);
+
+        // user.email is encrypted
+        assert_ne!(user.email, user_read.email);
+        assert_eq!(user.email_digest, user_read.email_digest);
 
         Ok(())
     }
