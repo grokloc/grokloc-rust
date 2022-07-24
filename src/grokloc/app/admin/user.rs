@@ -282,6 +282,10 @@ mod tests {
 
         // user.api_secret is encrypted
         assert_ne!(user.api_secret, user_read.api_secret);
+        assert_eq!(
+            crypt::sha256_hex(&user_read.api_secret.to_string()),
+            user_read.api_secret_digest.to_string()
+        );
 
         // user.display_name is encrypted
         assert_ne!(user.display_name, user_read.display_name);
@@ -294,6 +298,10 @@ mod tests {
         // user.email is encrypted
         assert_ne!(user.email, user_read.email);
         assert_eq!(user.email_digest, user_read.email_digest);
+        assert_eq!(
+            crypt::sha256_hex(&user_read.email.to_string()),
+            user_read.email_digest.to_string()
+        );
 
         assert_eq!(user.org, user_read.org);
         assert_eq!(user.password, user_read.password);
