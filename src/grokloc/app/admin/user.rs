@@ -286,10 +286,23 @@ mod tests {
         // user.display_name is encrypted
         assert_ne!(user.display_name, user_read.display_name);
         assert_eq!(user.display_name_digest, user_read.display_name_digest);
+        assert_eq!(
+            crypt::sha256_hex(&user_read.display_name.to_string()),
+            user_read.display_name_digest.to_string()
+        );
 
         // user.email is encrypted
         assert_ne!(user.email, user_read.email);
         assert_eq!(user.email_digest, user_read.email_digest);
+
+        assert_eq!(user.org, user_read.org);
+        assert_eq!(user.password, user_read.password);
+
+        assert_eq!(user.meta.schema_version, user_read.meta.schema_version);
+        assert_eq!(user.meta.status, user_read.meta.status);
+
+        assert!(user.meta.ctime < user_read.meta.ctime);
+        assert!(user.meta.mtime < user_read.meta.mtime);
 
         Ok(())
     }
