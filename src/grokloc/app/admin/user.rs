@@ -316,4 +316,24 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn user_read_miss_test() -> Result<(), anyhow::Error> {
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+        let user_read_result = match User::read(&pool, &Uuid::new_v4(), &crypt::rand_key()).await {
+            Err(e) => e,
+            Ok(_) => unreachable!(),
+        };
+        assert!(matches!(
+            user_read_result.downcast_ref::<sqlx::Error>(),
+            Some(sqlx::Error::RowNotFound)
+        ));
+        Ok(())
+    }
 }
