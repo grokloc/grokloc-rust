@@ -183,13 +183,18 @@ impl User {
         pool: &sqlx::SqlitePool,
         new_status: models::Status,
     ) -> Result<(), anyhow::Error> {
-        if let Err(update_error) = sqlx::query(UPDATE_STATUS_QUERY)
+        let update_result = match sqlx::query(UPDATE_STATUS_QUERY)
             .bind(new_status.to_int())
             .bind(self.id.to_string())
             .execute(pool)
             .await
         {
-            return Err(update_error.into());
+            Err(e) => return Err(e.into()),
+            Ok(v) => v,
+        };
+
+        if update_result.rows_affected() != 1 {
+            return Err(sqlx::Error::RowNotFound.into());
         }
 
         // the update to the db was a success, set the internal field
@@ -203,6 +208,7 @@ impl User {
 mod tests {
     use super::*;
     use crate::grokloc::app::schema;
+    use crate::grokloc::db;
 
     #[test]
     fn user_encrypted_test() -> Result<(), anyhow::Error> {
@@ -356,10 +362,8 @@ mod tests {
             Err(e) => e,
             Ok(_) => unreachable!(),
         };
-        assert!(matches!(
-            user_read_result.downcast_ref::<sqlx::Error>(),
-            Some(sqlx::Error::RowNotFound)
-        ));
+
+        assert!(db::anyhow_sqlx_row_not_found(&user_read_result));
 
         Ok(())
     }
@@ -399,6 +403,32 @@ mod tests {
 
         assert_eq!(user.id, user_read.id);
         assert_eq!(models::Status::Active, user_read.meta.status);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn user_update_status_miss_test() -> Result<(), anyhow::Error> {
+        // build the user
+        let key = crypt::rand_key();
+        let display_name = safe::VarChar::rand();
+        let email = safe::VarChar::rand();
+        let org = Uuid::new_v4();
+        let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+        let mut user = User::encrypted(&display_name, &email, &org, &password, &key)?;
+
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        match user.update_status(&pool, models::Status::Active).await {
+            Ok(_) => unreachable!(),
+            Err(e) => assert!(db::anyhow_sqlx_row_not_found(&e)),
+        };
 
         Ok(())
     }
