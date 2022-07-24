@@ -26,7 +26,6 @@ insert into users
 (?,?,?,?,?,?,?,?,?,?,?)
 "#;
 
-#[allow(dead_code)]
 pub const SELECT_QUERY: &str = r#"
     select
     api_secret,
@@ -42,6 +41,10 @@ pub const SELECT_QUERY: &str = r#"
     ctime,
     mtime
     from users where id = ?;
+"#;
+
+pub const UPDATE_STATUS_QUERY: &str = r#"
+    update users set status = ? where id = ?;
 "#;
 
 /// User is the data representation of an users row
@@ -172,6 +175,28 @@ impl User {
             )?,
         })
     }
+
+    /// update_status updates the user status
+    #[allow(dead_code)]
+    pub async fn update_status(
+        &mut self,
+        pool: &sqlx::SqlitePool,
+        new_status: models::Status,
+    ) -> Result<(), anyhow::Error> {
+        if let Err(update_error) = sqlx::query(UPDATE_STATUS_QUERY)
+            .bind(new_status.to_int())
+            .bind(self.id.to_string())
+            .execute(pool)
+            .await
+        {
+            return Err(update_error.into());
+        }
+
+        // the update to the db was a success, set the internal field
+        self.meta.status = new_status;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -247,6 +272,7 @@ mod tests {
         user.insert(&mut txn).await?;
         // implicit rollback
         txn.commit().await?;
+
         Ok(())
     }
 
@@ -334,6 +360,46 @@ mod tests {
             user_read_result.downcast_ref::<sqlx::Error>(),
             Some(sqlx::Error::RowNotFound)
         ));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn user_update_status_test() -> Result<(), anyhow::Error> {
+        // build the user
+        let key = crypt::rand_key();
+        let display_name = safe::VarChar::rand();
+        let email = safe::VarChar::rand();
+        let org = Uuid::new_v4();
+        let password = safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+        let mut user = User::encrypted(&display_name, &email, &org, &password, &key)?;
+
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        // insert the user
+        let mut txn = pool.begin().await?;
+        user.insert(&mut txn).await?;
+        // implicit rollback
+        txn.commit().await?;
+
+        // update the status of the user
+        user.update_status(&pool, models::Status::Active).await?;
+
+        // read that user
+        let user_read = match User::read(&pool, &user.id, &key).await {
+            Err(_) => unreachable!(),
+            Ok(v) => v,
+        };
+
+        assert_eq!(user.id, user_read.id);
+        assert_eq!(models::Status::Active, user_read.meta.status);
+
         Ok(())
     }
 }
