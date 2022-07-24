@@ -35,10 +35,8 @@ pub fn string_ok(s: &str) -> bool {
 
 /// VarChar is a string container that proves that the value is safe for db storage
 #[derive(Clone, Debug, PartialEq)]
-#[allow(dead_code)]
 pub struct VarChar(String);
 
-#[allow(dead_code)]
 impl VarChar {
     /// new produces a VarChar iff the input string is safe
     pub fn new(raw: &str) -> Result<VarChar, Err> {
@@ -48,7 +46,13 @@ impl VarChar {
         }
     }
 
+    /// trusted can be used to construct a VarChar if the input is trustworthy
+    pub fn trusted(raw: &str) -> VarChar {
+        VarChar(raw.to_string())
+    }
+
     /// rand produces a (long!) random string from a uuid
+    #[allow(dead_code)]
     pub fn rand() -> VarChar {
         VarChar(crypt::rand_hex())
     }

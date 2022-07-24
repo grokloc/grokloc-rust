@@ -152,16 +152,18 @@ impl User {
 
         Ok(Self {
             id: *id,
-            api_secret: safe::VarChar::new(&api_secret_)?,
-            api_secret_digest: safe::VarChar::new(&row.try_get::<String, _>("api_secret_digest")?)?,
-            display_name: safe::VarChar::new(&display_name_)?,
-            display_name_digest: safe::VarChar::new(
+            api_secret: safe::VarChar::trusted(&api_secret_),
+            api_secret_digest: safe::VarChar::trusted(
+                &row.try_get::<String, _>("api_secret_digest")?,
+            ),
+            display_name: safe::VarChar::trusted(&display_name_),
+            display_name_digest: safe::VarChar::trusted(
                 &row.try_get::<String, _>("display_name_digest")?,
-            )?,
-            email: safe::VarChar::new(&email_)?,
-            email_digest: safe::VarChar::new(&email_digest_)?,
+            ),
+            email: safe::VarChar::trusted(&email_),
+            email_digest: safe::VarChar::trusted(&email_digest_),
             org: Uuid::try_parse(&row.try_get::<String, _>("org")?)?,
-            password: safe::VarChar::new(&row.try_get::<String, _>("password")?)?,
+            password: safe::VarChar::trusted(&row.try_get::<String, _>("password")?),
             meta: models::Meta::from_db(
                 row.try_get::<i64, _>("ctime")?,
                 row.try_get::<i64, _>("mtime")?,
