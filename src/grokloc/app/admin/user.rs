@@ -104,7 +104,7 @@ impl User {
         })
     }
 
-    /// insert performs db insert with no integrity check on the org (see "create")
+    /// insert performs db insert with no integrity check on the org (see create)
     ///
     /// assumed to be called within an existing transaction that includes
     /// consistency checks, so connection handle is a sqlx::Transaction
