@@ -20,31 +20,32 @@ insert into users
  email_digest,
  org,
  password,
- status,
- schema_version)
- values
+ schema_version,
+ status)
+values
 (?,?,?,?,?,?,?,?,?,?,?)
 "#;
 
 pub const SELECT_QUERY: &str = r#"
-    select
-    api_secret,
-    api_secret_digest,
-    display_name,
-    display_name_digest,
-    email,
-    email_digest,
-    org,
-    password,
-    schema_version,
-    status,
-    ctime,
-    mtime
-    from users where id = ?;
+select
+ api_secret,
+ api_secret_digest,
+ display_name,
+ display_name_digest,
+ email,
+ email_digest,
+ org,
+ password,
+ ctime,
+ mtime,
+ schema_version,
+ status
+from users
+where id = ?;
 "#;
 
 pub const UPDATE_STATUS_QUERY: &str = r#"
-    update users set status = ? where id = ?;
+update users set status = ? where id = ?;
 "#;
 
 /// User is the data representation of an users row
@@ -123,8 +124,8 @@ impl User {
             .bind(self.email_digest.to_string())
             .bind(self.org.to_string())
             .bind(self.password.to_string())
-            .bind(self.meta.status.to_int())
             .bind(self.meta.schema_version)
+            .bind(self.meta.status.to_int())
             .execute(txn)
             .await
         {

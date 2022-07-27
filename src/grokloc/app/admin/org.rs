@@ -4,6 +4,7 @@ use crate::grokloc::app::models;
 use crate::grokloc::safe;
 use anyhow;
 use sqlx;
+use sqlx::Row;
 use uuid::Uuid;
 
 #[allow(dead_code)]
@@ -14,10 +15,23 @@ insert into orgs
 (id,
  name,
  owner,
- status,
- schema_version)
+ schema_version,
+ status)
  values
 (?,?,?,?,?)
+"#;
+
+#[allow(dead_code)]
+pub const SELECT_QUERY: &str = r#"
+select
+ name,
+ owner,
+ ctime,
+ mtime,
+ schema_version,
+ status
+from orgs
+where id = ?
 "#;
 
 /// Org is the data representation of an orgs row
@@ -41,8 +55,8 @@ impl Org {
             .bind(self.id.to_string())
             .bind(self.name.to_string())
             .bind(self.owner.to_string())
-            .bind(self.meta.status.to_int())
             .bind(self.meta.schema_version)
+            .bind(self.meta.status.to_int())
             .execute(txn)
             .await
         {
@@ -86,6 +100,27 @@ impl Org {
 
         Ok((org, owner))
     }
+
+    /// read selects a row an orgs row to construct an Org instance
+    #[allow(dead_code)]
+    pub async fn read(pool: &sqlx::SqlitePool, id: &Uuid) -> Result<Self, anyhow::Error> {
+        let row = sqlx::query(SELECT_QUERY)
+            .bind(&id.to_string())
+            .fetch_one(pool)
+            .await?;
+
+        Ok(Self {
+            id: *id,
+            name: safe::VarChar::trusted(&row.try_get::<String, _>("name")?),
+            owner: Uuid::try_parse(&row.try_get::<String, _>("owner")?)?,
+            meta: models::Meta::from_db(
+                row.try_get::<i64, _>("ctime")?,
+                row.try_get::<i64, _>("mtime")?,
+                row.try_get::<i8, _>("schema_version")?,
+                row.try_get::<i64, _>("status")?,
+            )?,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -95,7 +130,7 @@ mod tests {
     use anyhow;
 
     #[tokio::test]
-    async fn org_create_test() -> Result<(), anyhow::Error> {
+    async fn org_insert_test() -> Result<(), anyhow::Error> {
         let org = Org {
             id: Uuid::new_v4(),
             name: safe::VarChar::rand(),
@@ -119,6 +154,43 @@ mod tests {
         org.insert(&mut txn).await?;
         // implicit rollback
         txn.commit().await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn org_read_test() -> Result<(), anyhow::Error> {
+        let org = Org {
+            id: Uuid::new_v4(),
+            name: safe::VarChar::rand(),
+            owner: Uuid::new_v4(),
+            meta: models::Meta {
+                schema_version: SCHEMA_VERSION,
+                ..Default::default()
+            },
+        };
+
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        // insert the org
+        let mut txn = pool.begin().await?;
+        org.insert(&mut txn).await?;
+        // implicit rollback
+        txn.commit().await?;
+
+        // read that user
+        let org_read = match Org::read(&pool, &org.id).await {
+            Err(_) => unreachable!(),
+            Ok(v) => v,
+        };
+
+        assert_eq!(org.id, org_read.id);
 
         Ok(())
     }
