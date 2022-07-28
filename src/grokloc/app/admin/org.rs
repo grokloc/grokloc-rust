@@ -126,7 +126,10 @@ impl Org {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::grokloc::app::admin::user::User;
     use crate::grokloc::app::schema;
+    use crate::grokloc::crypt;
+    use crate::grokloc::db;
     use anyhow;
 
     #[tokio::test]
@@ -184,13 +187,78 @@ mod tests {
         // implicit rollback
         txn.commit().await?;
 
-        // read that user
+        // read that org
         let org_read = match Org::read(&pool, &org.id).await {
             Err(_) => unreachable!(),
             Ok(v) => v,
         };
 
         assert_eq!(org.id, org_read.id);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn org_read_miss_test() -> Result<(), anyhow::Error> {
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+        let org_read_result = match Org::read(&pool, &Uuid::new_v4()).await {
+            Err(e) => e,
+            Ok(_) => unreachable!(),
+        };
+
+        assert!(db::anyhow_sqlx_row_not_found(&org_read_result));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn org_create_test() -> Result<(), anyhow::Error> {
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        let key = crypt::rand_key();
+        let name = safe::VarChar::rand();
+        let owner_display_name = safe::VarChar::rand();
+        let owner_email = safe::VarChar::rand();
+        let owner_password =
+            safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+
+        let (org, owner) = Org::create(
+            &pool,
+            &name,
+            &owner_display_name,
+            &owner_email,
+            &owner_password,
+            &key,
+        )
+        .await?;
+
+        // read the org
+        let org_read = match Org::read(&pool, &org.id).await {
+            Err(_) => unreachable!(),
+            Ok(v) => v,
+        };
+
+        assert_eq!(org.id, org_read.id);
+
+        // read the owner
+        let user_read = match User::read(&pool, &owner.id, &key).await {
+            Err(_) => unreachable!(),
+            Ok(v) => v,
+        };
+
+        assert_eq!(owner.id, user_read.id);
 
         Ok(())
     }
