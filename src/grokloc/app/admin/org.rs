@@ -79,7 +79,8 @@ impl Org {
         let id = Uuid::new_v4();
 
         // build and insert org owner
-        let owner = User::encrypted(owner_display_name, owner_email, &id, owner_password, key)?;
+        let mut owner = User::encrypted(owner_display_name, owner_email, &id, owner_password, key)?;
+        owner.meta.status = models::Status::Active;
         let mut txn = pool.begin().await?;
         owner.insert(&mut txn).await?;
 
@@ -194,6 +195,10 @@ mod tests {
         };
 
         assert_eq!(org.id, org_read.id);
+        assert_eq!(org.name, org_read.name);
+        assert_eq!(org.owner, org_read.owner);
+        assert!(org.meta.ctime < org_read.meta.ctime);
+        assert!(org.meta.mtime < org_read.meta.mtime);
 
         Ok(())
     }
@@ -251,6 +256,8 @@ mod tests {
         };
 
         assert_eq!(org.id, org_read.id);
+        assert!(org.meta.ctime < org_read.meta.ctime);
+        assert!(org.meta.mtime < org_read.meta.mtime);
 
         // read the owner
         let user_read = match User::read(&pool, &owner.id, &key).await {
@@ -259,6 +266,9 @@ mod tests {
         };
 
         assert_eq!(owner.id, user_read.id);
+        assert_eq!(models::Status::Active, user_read.meta.status);
+        assert!(owner.meta.ctime < user_read.meta.ctime);
+        assert!(owner.meta.mtime < user_read.meta.mtime);
 
         Ok(())
     }
