@@ -67,7 +67,6 @@ impl Org {
     }
 
     /// create forms a new Org with a new User as owner
-    #[allow(dead_code)]
     pub async fn create(
         pool: &sqlx::SqlitePool,
         name: &safe::VarChar,

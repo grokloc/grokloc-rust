@@ -1,16 +1,12 @@
 //! state provides a trait for accessing conns and symbols
+use crate::grokloc::app::admin::org::Org;
+use crate::grokloc::app::admin::user::User;
 use crate::grokloc::app::schema;
 use crate::grokloc::crypt;
 use crate::grokloc::env;
+use crate::grokloc::safe;
+use anyhow;
 use sqlx;
-use thiserror::Error;
-
-/// Err abstracts over state error types
-#[derive(Debug, Error)]
-pub enum Err {
-    #[error("sql error: {0}")]
-    Sqlx(sqlx::Error),
-}
 
 /// App is the central state access mechanism
 pub struct App {
@@ -20,38 +16,51 @@ pub struct App {
     pub kdf_iterations: u32,
     pub key: String,
     pub repo_base: String,
-    pub root_org: String,
-    pub root_user: String,
-    pub root_user_api_secret: String,
+    pub root_org: Org,
+    pub root_user: User,
 }
 
 #[allow(dead_code)]
-pub async fn unit() -> Result<App, Err> {
-    let master_pool_ = match sqlx::sqlite::SqlitePoolOptions::new()
+pub async fn unit() -> Result<App, anyhow::Error> {
+    let master_pool = sqlx::sqlite::SqlitePoolOptions::new()
         .connect("sqlite::memory:")
-        .await
-    {
-        Ok(p) => p,
-        Err(e) => return Err(Err::Sqlx(e)),
-    };
-    // set up the schema, created anew each time unit state is requested
-    let _ = match sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
-        .execute(&master_pool_)
-        .await
-    {
-        Ok(o) => o,
-        Err(e) => return Err(Err::Sqlx(e)),
-    };
-    let replica_pool_ = master_pool_.clone();
+        .await?;
+    sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+        .execute(&master_pool)
+        .await?;
+
+    let key = crypt::rand_key();
+    let (root_org, root_user) = Org::create(
+        &master_pool,
+        &safe::VarChar::rand(), // org name
+        &safe::VarChar::rand(), // org owner display name
+        &safe::VarChar::rand(), // org owner email
+        &safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?, // org owner password
+        &key,
+    )
+    .await?;
+
+    let replica_pool = master_pool.clone();
     Ok(App {
         level: env::Level::Unit,
-        master_pool: master_pool_,
-        replica_pool: replica_pool_,
-        kdf_iterations: 4,
-        key: crypt::rand_key(),
+        master_pool,
+        replica_pool,
+        kdf_iterations: crypt::MIN_KDF_ROUNDS,
+        key,
         repo_base: String::from("/tmp"),
-        root_org: String::from(""),
-        root_user: String::from(""),
-        root_user_api_secret: String::from(""),
+        root_org,
+        root_user,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow;
+
+    #[tokio::test]
+    async fn unit_state_test() -> Result<(), anyhow::Error> {
+        let _ = unit().await?;
+        Ok(())
+    }
 }
