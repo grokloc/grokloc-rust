@@ -7,7 +7,6 @@ use sqlx;
 use sqlx::Row;
 use uuid::Uuid;
 
-#[allow(dead_code)]
 pub const SCHEMA_VERSION: i8 = 0;
 
 pub const INSERT_QUERY: &str = r#"
@@ -21,7 +20,6 @@ insert into orgs
 (?,?,?,?,?)
 "#;
 
-#[allow(dead_code)]
 pub const SELECT_QUERY: &str = r#"
 select
  name,
@@ -32,6 +30,10 @@ select
  status
 from orgs
 where id = ?
+"#;
+
+pub const UPDATE_STATUS_QUERY: &str = r#"
+update orgs set status = ? where id = ?;
 "#;
 
 /// Org is the data representation of an orgs row
@@ -120,6 +122,33 @@ impl Org {
                 row.try_get::<i64, _>("status")?,
             )?,
         })
+    }
+
+    /// update_status updates the org status
+    #[allow(dead_code)]
+    pub async fn update_status(
+        &mut self,
+        pool: &sqlx::SqlitePool,
+        new_status: models::Status,
+    ) -> Result<(), anyhow::Error> {
+        let update_result = match sqlx::query(UPDATE_STATUS_QUERY)
+            .bind(new_status.to_int())
+            .bind(self.id.to_string())
+            .execute(pool)
+            .await
+        {
+            Err(e) => return Err(e.into()),
+            Ok(v) => v,
+        };
+
+        if update_result.rows_affected() != 1 {
+            return Err(sqlx::Error::RowNotFound.into());
+        }
+
+        // the update to the db was a success, set the internal field
+        self.meta.status = new_status;
+
+        Ok(())
     }
 }
 
@@ -268,6 +297,80 @@ mod tests {
         assert_eq!(models::Status::Active, user_read.meta.status);
         assert!(owner.meta.ctime < user_read.meta.ctime);
         assert!(owner.meta.mtime < user_read.meta.mtime);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn org_update_status_test() -> Result<(), anyhow::Error> {
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        let key = crypt::rand_key();
+        let name = safe::VarChar::rand();
+        let owner_display_name = safe::VarChar::rand();
+        let owner_email = safe::VarChar::rand();
+        let owner_password =
+            safe::VarChar::new(&crypt::kdf(&crypt::rand_hex(), crypt::MIN_KDF_ROUNDS))?;
+
+        let (mut org, _) = Org::create(
+            &pool,
+            &name,
+            &owner_display_name,
+            &owner_email,
+            &owner_password,
+            &key,
+        )
+        .await?;
+
+        // update the status of the org
+        org.update_status(&pool, models::Status::Active).await?;
+
+        // read the org
+        let org_read = match Org::read(&pool, &org.id).await {
+            Err(_) => unreachable!(),
+            Ok(v) => v,
+        };
+
+        assert_eq!(org.id, org_read.id);
+        assert_eq!(models::Status::Active, org_read.meta.status);
+        assert!(org.meta.ctime < org_read.meta.ctime);
+        assert!(org.meta.mtime < org_read.meta.mtime);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn org_update_status_miss_test() -> Result<(), anyhow::Error> {
+        // create the db
+        let pool: sqlx::SqlitePool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await?;
+        sqlx::query(schema::APP_CREATE_SCHEMA_SQLITE)
+            .execute(&pool)
+            .await?;
+
+        // new org is never inserted
+        let mut org = Org {
+            id: Uuid::new_v4(),
+            name: safe::VarChar::rand(),
+            owner: Uuid::new_v4(),
+            meta: models::Meta {
+                status: models::Status::Active,
+                schema_version: SCHEMA_VERSION,
+                ..Default::default()
+            },
+        };
+
+        match org.update_status(&pool, models::Status::Active).await {
+            Ok(_) => unreachable!(),
+            Err(e) => assert!(db::anyhow_sqlx_row_not_found(&e)),
+        };
 
         Ok(())
     }
