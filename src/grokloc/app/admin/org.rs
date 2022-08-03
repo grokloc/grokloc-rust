@@ -38,7 +38,6 @@ update orgs set status = ? where id = ?;
 
 /// Org is the data representation of an orgs row
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct Org {
     pub id: uuid::Uuid,
     pub name: safe::VarChar,
@@ -329,7 +328,7 @@ mod tests {
         .await?;
 
         // update the status of the org
-        org.update_status(&pool, models::Status::Active).await?;
+        org.update_status(&pool, models::Status::Inactive).await?;
 
         // read the org
         let org_read = match Org::read(&pool, &org.id).await {
@@ -338,7 +337,7 @@ mod tests {
         };
 
         assert_eq!(org.id, org_read.id);
-        assert_eq!(models::Status::Active, org_read.meta.status);
+        assert_eq!(models::Status::Inactive, org_read.meta.status);
         assert!(org.meta.ctime < org_read.meta.ctime);
         assert!(org.meta.mtime < org_read.meta.mtime);
 

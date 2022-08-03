@@ -48,9 +48,13 @@ pub const UPDATE_STATUS_QUERY: &str = r#"
 update users set status = ? where id = ?;
 "#;
 
+#[allow(dead_code)]
+pub const UPDATE_DISPLAY_NAME_QUERY: &str = r#"
+update users set display_name = ?, display_name_digest = ? where id = ?
+"#;
+
 /// User is the data representation of an users row
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct User {
     pub id: Uuid,
     pub api_secret: safe::VarChar,
@@ -200,6 +204,39 @@ impl User {
 
         // the update to the db was a success, set the internal field
         self.meta.status = new_status;
+
+        Ok(())
+    }
+
+    /// update_display_name updates the user diplay_name and its digest
+    #[allow(dead_code)]
+    pub async fn update_display_name(
+        &mut self,
+        pool: &sqlx::SqlitePool,
+        new_display_name: &safe::VarChar,
+        key: &str,
+    ) -> Result<(), anyhow::Error> {
+        let iv = crypt::iv(&self.email_digest.to_string());
+        let encrypted_display_name = &crypt::encrypt(key, &iv, &new_display_name.to_string())?;
+        let display_name_digest = &crypt::sha256_hex(&new_display_name.to_string());
+        let update_result = match sqlx::query(UPDATE_DISPLAY_NAME_QUERY)
+            .bind(encrypted_display_name)
+            .bind(display_name_digest)
+            .bind(self.id.to_string())
+            .execute(pool)
+            .await
+        {
+            Err(e) => return Err(e.into()),
+            Ok(v) => v,
+        };
+
+        if update_result.rows_affected() != 1 {
+            return Err(sqlx::Error::RowNotFound.into());
+        }
+
+        // the update to the db was a success, set the internal field
+        self.display_name = new_display_name.clone();
+        self.display_name_digest = safe::VarChar::trusted(display_name_digest);
 
         Ok(())
     }

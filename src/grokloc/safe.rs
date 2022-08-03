@@ -52,7 +52,6 @@ impl VarChar {
     }
 
     /// rand produces a (long!) random string from a uuid
-    #[allow(dead_code)]
     pub fn rand() -> VarChar {
         VarChar(crypt::rand_hex())
     }
